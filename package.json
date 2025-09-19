@@ -4,7 +4,9 @@
   "description": "",
   "main": "tailwind.config.js",
   "scripts": {
-    "build-css": "tailwindcss -i ./src/tailwind.css -o ./assets/css/tailwind.css -w"
+    "build-config": "node scripts/write-config.js",
+    "build-css": "tailwindcss -i ./src/tailwind.css -o ./assets/css/tailwind.css -w",
+    "build": "npm run build-config && npm run build-css"
   },
   "repository": {
     "type": "git",
@@ -14,6 +16,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "dotenv": "^17.2.2",
     "prettier": "^3.1.1",
     "prettier-plugin-tailwindcss": "^0.5.9",
     "tailwindcss": "^3.3.5"

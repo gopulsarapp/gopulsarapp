@@ -156,3 +156,46 @@
   themeCheck();
   /* ========  themeSwitcher End ========= */
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ======== Contentful integration ========= */
+const spaceId = window.CONTENTFUL_SPACE_ID;
+const accessToken = window.CONTENTFUL_ACCESS_TOKEN;
+
+async function loadContentful() {
+  if (!spaceId || !accessToken) {
+    console.error("⚠️ Contentful credentials missing.");
+    return;
+  }
+
+  try {
+    const url = `https://cdn.contentful.com/spaces/${spaceId}/entries?access_token=${accessToken}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    console.log("✅ Fetched Contentful data:", data);
+
+    // Example: find entry with heroTitle field
+    const homepage = data.items.find((item) => item.fields.heroTitle);
+    if (homepage) {
+      const titleElement = document.getElementById("hero-title");
+      if (titleElement) {
+        titleElement.textContent = homepage.fields.heroTitle;
+      }
+    }
+  } catch (err) {
+    console.error("❌ Error fetching from Contentful:", err);
+  }
+}
+
+loadContentful();
