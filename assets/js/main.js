@@ -161,14 +161,96 @@
 
 
 
-
-
-
 /* ======== Contentful integration (improved) ========= */
 
 // safe references from window (written by contentful-config.js at build-time)
 const spaceId = window.CONTENTFUL_SPACE_ID;
 const accessToken = window.CONTENTFUL_ACCESS_TOKEN;
+
+/* ---- tiny helpers (minimal) ---- */
+
+// small html escape to avoid injection
+function escapeHtml(s = '') {
+  return String(s)
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#39;');
+}
+
+// minimal renderer for a few component types
+function renderEntryHTML(entry) {
+  if (!entry || !entry.sys) return '';
+  const typeId = entry.sys.contentType && entry.sys.contentType.sys && entry.sys.contentType.sys.id;
+
+  if (typeId === 'hero') {
+    const title = entry.fields.title || entry.fields.heroTitle || '';
+    const subtitle = entry.fields.subtitle || entry.fields.heroSubtitle || entry.fields.description || '';
+    return `
+      <section class="hero py-20 text-center">
+        <div class="container mx-auto">
+          <h1 class="text-4xl font-bold">${escapeHtml(title)}</h1>
+          ${subtitle ? `<p class="mt-4 text-lg">${escapeHtml(typeof subtitle === 'string' ? subtitle : String(subtitle))}</p>` : ''}
+        </div>
+      </section>
+    `;
+  }
+
+  if (typeId === 'feature') {
+    const heading = entry.fields.heading || '';
+    const description = entry.fields.description || '';
+    return `
+      <section class="feature p-6">
+        <div class="container mx-auto">
+          <h3 class="text-2xl font-semibold">${escapeHtml(heading)}</h3>
+          ${description ? `<p class="mt-2">${escapeHtml(typeof description === 'string' ? description : String(description))}</p>` : ''}
+        </div>
+      </section>
+    `;
+  }
+
+  if (typeId === 'testimonial') {
+    const quote = entry.fields.quote || '';
+    const author = entry.fields.author || '';
+    return `
+      <section class="testimonial p-6">
+        <div class="container mx-auto">
+          <blockquote class="italic">"${escapeHtml(quote)}"</blockquote>
+          ${author ? `<p class="mt-2 font-medium">— ${escapeHtml(author)}</p>` : ''}
+        </div>
+      </section>
+    `;
+  }
+
+  // fallback
+  return `<section class="unknown p-4"><div class="container mx-auto">Component: ${escapeHtml(typeId || 'unknown')}</div></section>`;
+}
+
+// render sections from a page entry using items list to resolve links
+function renderPageSections(pageEntry, allItems = []) {
+  const container = document.getElementById("page-sections");
+  if (!container || !pageEntry || !pageEntry.fields) return;
+
+  // clear previous
+  container.innerHTML = "";
+
+  // map items by id (items is the data.items array from your fetch)
+  const itemsMap = {};
+  allItems.forEach(i => { if (i && i.sys && i.sys.id) itemsMap[i.sys.id] = i; });
+
+  const sections = pageEntry.fields.sections || [];
+  sections.forEach(ref => {
+    // resolve entry: either already expanded (has fields) or a link (sys.id)
+    let entry = null;
+    if (ref && ref.fields) entry = ref;
+    else if (ref && ref.sys && ref.sys.id) entry = itemsMap[ref.sys.id];
+    if (!entry) return;
+
+    const html = renderEntryHTML(entry);
+    container.insertAdjacentHTML("beforeend", html);
+  });
+}
 
 async function loadContentful() {
   if (!spaceId || !accessToken) {
@@ -233,6 +315,9 @@ async function loadContentful() {
 
     // also set document title (browser tab)
     if (newTitle) document.title = `${newTitle} — ${document.title || "Site"}`;
+
+    // <-- IMPORTANT: render page sections into #page-sections (uses items array to resolve links) -->
+    renderPageSections(homepage, items);
 
     console.log("✅ Injected homepage content from Contentful:", {
       id: homepage.sys && homepage.sys.id,
