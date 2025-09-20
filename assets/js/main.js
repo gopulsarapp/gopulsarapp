@@ -164,12 +164,9 @@
 
 
 
+/* ======== Contentful integration (improved) ========= */
 
-
-
-
-
-/* ======== Contentful integration ========= */
+// safe references from window (written by contentful-config.js at build-time)
 const spaceId = window.CONTENTFUL_SPACE_ID;
 const accessToken = window.CONTENTFUL_ACCESS_TOKEN;
 
@@ -180,19 +177,68 @@ async function loadContentful() {
   }
 
   try {
-    const url = `https://cdn.contentful.com/spaces/${spaceId}/entries?access_token=${accessToken}`;
+    const url = `https://cdn.contentful.com/spaces/${spaceId}/entries?access_token=${accessToken}&limit=100`;
     const res = await fetch(url);
     const data = await res.json();
     console.log("✅ Fetched Contentful data:", data);
 
-    // Example: find entry with heroTitle field
-    const homepage = data.items.find((item) => item.fields.heroTitle);
-    if (homepage) {
-      const titleElement = document.getElementById("hero-title");
-      if (titleElement) {
-        titleElement.textContent = homepage.fields.heroTitle;
-      }
+    const items = Array.isArray(data.items) ? data.items : [];
+
+    if (items.length === 0) {
+      console.log("No entries returned from Contentful.");
+      return;
     }
+
+    // 1) Try to find an item with slug 'home'
+    let homepage = items.find(item => item.fields && item.fields.slug === "home");
+
+    // 2) If not found, try to find by common headline fields
+    if (!homepage) {
+      homepage = items.find(item => {
+        if (!item.fields) return false;
+        return !!(item.fields.heroTitle || item.fields.title || item.fields.headline || item.fields.hero);
+      });
+    }
+
+    // 3) Fallback to the first item
+    if (!homepage) homepage = items[0];
+
+    if (!homepage || !homepage.fields) {
+      console.log("Found no suitable homepage entry in Contentful data.");
+      return;
+    }
+
+    // Accept multiple field names — be tolerant
+    const fields = homepage.fields;
+    const newTitle =
+      fields.heroTitle ||
+      fields.title ||
+      fields.headline ||
+      fields.hero ||
+      "";
+
+    const newSubtitle =
+      fields.subtitle ||
+      fields.description ||
+      fields.heroSubtitle ||
+      "";
+
+    // update #hero-title
+    const titleEl = document.getElementById("hero-title");
+    if (titleEl && newTitle) titleEl.textContent = newTitle;
+
+    // optional: update #hero-subtitle if you have it
+    const subEl = document.getElementById("hero-subtitle");
+    if (subEl && newSubtitle) subEl.textContent = newSubtitle;
+
+    // also set document title (browser tab)
+    if (newTitle) document.title = `${newTitle} — ${document.title || "Site"}`;
+
+    console.log("✅ Injected homepage content from Contentful:", {
+      id: homepage.sys && homepage.sys.id,
+      title: newTitle,
+      subtitle: newSubtitle
+    });
   } catch (err) {
     console.error("❌ Error fetching from Contentful:", err);
   }
