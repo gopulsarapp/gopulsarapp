@@ -262,7 +262,6 @@ function populateHero(entries = [], assets = {}) {
         const a = heroAnchors[1];
         const svg = a.querySelector('svg');
         if (svg) {
-          // remove leftover text nodes but keep svg, then append text node
           Array.from(a.childNodes).forEach(n => { if (n.nodeType === 3 && n.textContent.trim()) a.removeChild(n); });
           a.appendChild(document.createTextNode(' ' + secondaryText));
         } else {
@@ -279,7 +278,7 @@ function populateHero(entries = [], assets = {}) {
     const heroImgEl = document.querySelector('#home img') || document.querySelector('img[alt="hero"]') || document.querySelector('.hero-content + div img');
 
 
-    
+
 if (heroImgEl) {
   const applyHeroSizing = () => {
     heroImgEl.style.width = '100%';
