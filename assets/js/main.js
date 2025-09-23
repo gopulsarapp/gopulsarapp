@@ -915,6 +915,78 @@ async function loadContentfulIntegration() {
   }
 }
 
+
+
+
+
+// contact form 
+(function(){
+  const form = document.getElementById('contact-form');
+  if (!form) return;
+
+  const msgEl = document.getElementById('form-msg');
+  const submitBtn = document.getElementById('contact-submit');
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // Basic HTML5 validity check
+    if (!form.checkValidity()) {
+      msgEl.textContent = 'Please fill all required fields correctly.';
+      msgEl.style.color = 'red';
+      return;
+    }
+
+    // Simple anti-bot honeypot (if you add one later)
+    const gotcha = form.querySelector('input[name="_gotcha"]');
+    if (gotcha && gotcha.value) return;
+
+    // Put the user's email into _replyto so Formspree sets reply-to
+    const emailInput = form.querySelector('input[name="email"]');
+    if (emailInput) {
+      let reply = form.querySelector('input[name="_replyto"]');
+      if (!reply) {
+        reply = document.createElement('input');
+        reply.type = 'hidden';
+        reply.name = '_replyto';
+        form.appendChild(reply);
+      }
+      reply.value = emailInput.value;
+    }
+
+    submitBtn.disabled = true;
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Sending...';
+    msgEl.style.color = 'inherit';
+    msgEl.textContent = '';
+
+    try {
+      const res = await fetch(form.action, {
+        method: form.method || 'POST',
+        body: new FormData(form),
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        msgEl.textContent = 'Thanks — your message was sent!';
+        msgEl.style.color = 'green';
+        form.reset();
+      } else {
+        // try to show Formspree error if any
+        const data = await res.json().catch(()=>null);
+        msgEl.textContent = (data && data.error) ? data.error : 'Sending failed. Please try again later.';
+        msgEl.style.color = 'red';
+      }
+    } catch (err) {
+      console.error(err);
+      msgEl.textContent = 'Network error. Please try again later.';
+      msgEl.style.color = 'red';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  });
+})();
+
 /* run after DOM ready */
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadContentfulIntegration);
 else loadContentfulIntegration();
